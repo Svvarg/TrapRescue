@@ -1,0 +1,112 @@
+buildscript {
+    repositories {
+        mavenLocal()
+        maven {
+            name = "maven"
+            url = "https://repo1.maven.org/maven2"
+        }
+        maven {
+            name = "forge"
+            url = "https://maven.minecraftforge.net/"
+        }
+        maven {
+            name = "sonatype"
+            url = "https://oss.sonatype.org/content/repositories/snapshots/"
+        }
+    }
+    dependencies {
+        classpath ('com.anatawa12.forge:ForgeGradle:1.2-1.1.+') {
+            changing = true
+        }
+    }
+}
+
+plugins {
+    id 'eclipse' // for jdtls
+    id 'maven-publish'
+}
+
+apply plugin: 'java'
+apply plugin: 'forge'
+
+sourceCompatibility = targetCompatibility = '1.8'
+compileJava {
+    sourceCompatibility = targetCompatibility = '1.8'
+}
+[compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
+tasks.withType(JavaCompile) {
+    options.encoding = "UTF-8"
+}
+
+version = project.version
+group = project.group
+mod_id = project.mod_id
+archivesBaseName = "${project.mod_id}"
+
+
+minecraft {
+    version = "${project.mc_version}-${project.forge_version}-${project.mc_version}"
+    runDir = "run"
+}
+
+repositories {
+    mavenLocal()
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.11.4'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.11.4'
+    testImplementation 'org.junit.jupiter:junit-jupiter-params:5.11.4'
+}
+
+// This task creates a .jar file containing a deobfuscated version of this mod,
+// for other developers to use in a development environment. (aka devJar)
+task deobfJar(type: Jar) {
+    from sourceSets.main.output
+    archiveClassifier = 'dev'
+}
+
+jar {
+    // manifest { }
+}
+
+tasks.build.dependsOn('deobfJar')
+
+processResources {
+    // Specify that placeholders need to be replaced for these files
+    filesMatching('mcmod.info') {
+        expand 'mod_id': project.mod_id,
+               'mod_name': project.mod_name,
+               'mod_version': project.version,
+               'mc_version': project.mc_version,
+               'forge_version': project.forge_version
+    }
+}
+
+
+// for installation in a local maven repository, (jar + deobfJar)
+artifacts {
+    archives jar, deobfJar
+}
+
+// This block configures any maven publications you want to make.
+publishing {
+    publications {
+        mavenJava(MavenPublication) { // artifacts to publish
+            artifact(jar) { builtBy build }
+            artifact(deobfJar) { builtBy deobfJar }
+            // artifact(sourcesJar) { builtBy sourcesJar }
+        }
+    }
+
+    // This block selects the repositories you want to publish to.
+    repositories {
+        // Add the repositories you want to publish to here.
+    }
+}
+
+// to create gradle-wrapper use cmd: `gradle wrapper`
+tasks.named('wrapper') {
+  distributionType = Wrapper.DistributionType.ALL
+  gradleVersion = '8.9'
+}

@@ -1,0 +1,22 @@
+{
+  "modListVersion": 2,
+  "modList": [{
+    "modid": "${mod_id}",
+    "name": "${mod_name}",
+    "description": "Rescue players trapped in lost claims. Manual teleport or auto safe-spot finder in the same chunk. Works on offline players via direct .dat editing. For servers with no /tp commands."
+    "version": "${mod_version}",
+    "mcversion": "${mc_version}",
+    "url" : "todo",
+    "updateUrl": "todo",
+    "authorList": [ "Swarg" ],
+    "credits": "todo",
+    "logoFile": "/assets/${mod_name}Logo.png",
+    "screenshots": [  ],
+    "parent": "",
+    "requiredMods": [  ],
+    "dependencies": ["Forge@[${forge_version},)"],
+    "dependants": [  ],
+    "useDependencyInformation": "true"
+  }]
+}
+
