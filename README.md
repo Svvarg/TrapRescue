@@ -27,6 +27,12 @@ All commands require OP level 4 or server console.
 - `/trap-rescue-admin config reload`
   Reload the configuration from disk.
 
+- `/trap-rescue-admin player uuid <player>`
+  Look up the UUID of a player.
+
+- `/trap-rescue-admin player pos <player>`
+  Show the last known position and dimension of a player (from their .dat file).
+
 - `/trap-rescue-admin help`
   Print help.
 
@@ -39,7 +45,7 @@ File: `config/traprescue.cfg`
 
 ## Offline rescue
 
-If the target player is offline, the mod edits the player's `.dat` file directly: loads the chunk, finds a safe spot (in auto mode), and rewrites the player's position. No player login required.
+If the target player is offline, the mod edits the player's `.dat` file directly and rewrites the player's position. No player login required. Manual mode is fully supported. Auto safe-spot detection for offline players is planned.
 
 ## Installation
 

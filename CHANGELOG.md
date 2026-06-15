@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-06-15
+### Added
+- Offline manual rescue: teleport offline players via direct `.dat` editing.
+- `PlayerDataManager`: UUID resolution (profile cache + Forge UsernameCache fallback), `.dat` load/save, get/set `Pos`, `Dimension`, world spawn.
+- Command `/trap-rescue-admin player uuid <name>` and `player pos <name>` for debugging.
+- `RescueService.rescue(String playerName)` for auto-mode entry point (stub).
+### Changed
+- `rescueManual` dispatcher now routes to offline if player not online.
+- `sayResult` simplified (no player name parameter).
+
 ### Added
 - Basic mod structure: `TrapRescueMod.java`, `Config.java`, `Reference.java`.
 - Command `/trap-rescue-admin` with subcommands:

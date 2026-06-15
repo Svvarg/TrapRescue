@@ -4,11 +4,13 @@ package org.swarg.mc.traprescue.cmd;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.ICommandSender;
 
 import org.swarg.mc.traprescue.Config;
 import org.swarg.mc.traprescue.OpResult;
+import org.swarg.mc.traprescue.data.PlayerDataManager;
 import org.swarg.mc.traprescue.rescue.RescueService;
 import static org.swarg.mc.traprescue.cmd.CommandHelper.*;
 
@@ -22,7 +24,7 @@ public class TrapRescueCommand extends CommandBase {
 
     @Override
     public String getCommandUsage(ICommandSender sender) {
-        return "/trap-rescue-admin <config/rescue/blacklist>";
+        return "/trap-rescue-admin <config/rescue/blacklist/player>";
     }
 
     @Override
@@ -34,6 +36,8 @@ public class TrapRescueCommand extends CommandBase {
                 cmdRescue(sender, args);
             } else if (isCmd(args, 0, "blacklist", "bl")) {
                 cmdBlacklist(sender, args);
+            } else if (isCmd(args, 0, "player", "p")) {
+                cmdPlayer(sender, args);
             } else {
                 say(sender, "Unknown command: " + args[0]);
             }
@@ -68,8 +72,7 @@ public class TrapRescueCommand extends CommandBase {
         if (args.length >= 5) {
             return doRescueManual(sender, args, pname);
         }
-        return sayResult(sender, pname,
-                RescueService.rescue(pname, null, null, null, null));
+        return sayResult(sender, RescueService.rescue(pname));
     }
 
     // Manual mode: x y z dim (dim defaults to 0 if not present)
@@ -91,7 +94,7 @@ public class TrapRescueCommand extends CommandBase {
             }
         }
 
-        return sayResult(s, pname, RescueService.rescue(pname, x, y, z, dim));
+        return sayResult(s, RescueService.rescue(pname, x, y, z, dim));
     }
 
     private boolean cmdBlacklist(ICommandSender sender, String[] args) {
@@ -115,7 +118,25 @@ public class TrapRescueCommand extends CommandBase {
         return say(sender, "Unknown command: " + args[0]);
     }
 
-    private boolean sayResult(ICommandSender sender, String pname, OpResult res) {
+    private boolean cmdPlayer(ICommandSender s, String[] args) {
+        if (isCmd(args, 1, "help", "h") || args.length < 2) {
+            return sayUsage(this, s, "player <uuid/pos> <playerName>");
+        }
+        String name = argS(args, 2); // PlayerName
+        if (name == null || name.length() < 2) {
+            return say(s, "Invalid player name: " + name);
+        }
+        if (isCmd(args, 1, "uuid", "u")) {
+            UUID uuid = PlayerDataManager.resolveUUID(name);
+            return say(s, "UUID:" + uuid);
+        }
+        if (isCmd(args, 1, "pos", "p")) {
+            return sayResult(s, PlayerDataManager.getPlayerPosByName(name));
+        }
+        return true;
+    }
+
+    private boolean sayResult(ICommandSender sender, OpResult res) {
         if (res == null) {
             return say(sender, "no result");
         }
@@ -123,9 +144,6 @@ public class TrapRescueCommand extends CommandBase {
         if (res.isSuccess()) {
             if (msg == null || msg.isEmpty()) { msg = "Ok"; }
             return say(sender, msg);
-        }
-        if (msg == null || msg.isEmpty()) {
-            msg = "for playerName: " + pname;
         }
         return say(sender, "[FAIL] " + res.message);
     }
