@@ -197,40 +197,43 @@ public class PlayerDataManager {
     }
 
     /**
-     * @return OpResult on fail and NBTTagCompound on success
+     * getPlayerNBTData
      */
-    public static Object getPlayerNBTData(String pname) {
+    public static OpResult resolveAndLoadPlayerData(String pname) {
         UUID uuid = PlayerDataManager.resolveUUID(pname);
         if (uuid == null) {
-            return OpResult.fail("Not found UUID for name: " + pname);
+            return OpResult.fail("Not found UUID for player: " + pname);
         }
-        File file = PlayerDataManager.getPlayerDatFile(uuid);
-        if (file == null) {
+        File datFile = PlayerDataManager.getPlayerDatFile(uuid);
+        if (datFile == null) {
             return OpResult.fail("Cannot get the file for player: " + pname);
         }
-        if (!file.exists()) {
-            return OpResult.fail("Not found player dat-file: " + file);
+        if (!datFile.exists()) {
+            return OpResult.fail("Not found player dat-file: " + datFile);
         }
-        NBTTagCompound nbt = PlayerDataManager.loadPlayerData(file);
+        NBTTagCompound nbt = PlayerDataManager.loadPlayerData(datFile);
         if (nbt == null) {
-            return OpResult.fail("Cannot read the NBT for player:" + pname);
+            return OpResult.fail("Failed to read player data for " + pname);
         }
-        return nbt;
+        return OpResult.okData(new PlayerDataResolve(datFile, nbt));
     }
 
-    // helpers for manual
+    /**
+     * @return OpResult with readable coords and dimension
+     */
     public static OpResult getPlayerPosByName(String pname) {
-        Object res = getPlayerNBTData(pname);
-        if (res instanceof OpResult) {
-            return (OpResult)res;
+        OpResult res = resolveAndLoadPlayerData(pname);
+        PlayerDataResolve pdata = res.getData(PlayerDataResolve.class);
+        if (pdata == null) {
+            System.out.println("getPlayerPosByName data:" + res.data);
+            return res;
         }
-        NBTTagCompound nbt = (NBTTagCompound) res;
 
-        double[] pos = PlayerDataManager.getPlayerPos(nbt);
+        double[] pos = PlayerDataManager.getPlayerPos(pdata.nbt);
         if (pos == null) {
             return OpResult.fail("Cannot get the Pos from NBT of:" + pname);
         }
-        Integer dim = getPlayerDimension(nbt);
+        Integer dim = getPlayerDimension(pdata.nbt);
 
         return OpResult.ok(String.format("Pos: %.1f %.1f %.1f dim: %s",
                     pos[0], pos[1], pos[2], dim));
