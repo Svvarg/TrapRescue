@@ -191,4 +191,47 @@ public class RescueService {
         logInfo(String.format("Player %s rescued from %d %d %d dim: %d)",
                 pname, x, y, z, dim));
     }
+
+    /**
+     * Checks whether a player (online or offline) is inside the radius of any
+     * safe spot.
+     * @param pname The player's exact name.
+     * @return OpResult with a human-readable message about the safe spot and
+     * distance, or an error.
+     */
+    public static OpResult checkSafeSpot(String pname) {
+        EntityPlayerMP onlinePlayer = findPlayerOnline(pname);
+        int px, py, pz, dim;
+
+        if (onlinePlayer != null) {
+            px = (int) Math.round(onlinePlayer.posX);
+            py = (int) Math.round(onlinePlayer.posY);
+            pz = (int) Math.round(onlinePlayer.posZ);
+            dim = onlinePlayer.dimension;
+        } else {
+            OpResult res = PlayerDataManager.resolveAndLoadPlayerData(pname);
+            PlayerDataResolve pdata = res.getData(PlayerDataResolve.class);
+            if (pdata == null) {
+                return res;
+            }
+            double[] pos = PlayerDataManager.getPlayerPos(pdata.nbt);
+            if (pos == null) {
+                return OpResult.fail("Cannot get position for player: " + pname);
+            }
+            Integer dimObj = PlayerDataManager.getPlayerDimension(pdata.nbt);
+            dim = (dimObj != null) ? dimObj : 0;
+            px = (int) Math.round(pos[0]);
+            py = (int) Math.round(pos[1]);
+            pz = (int) Math.round(pos[2]);
+        }
+
+        SafeSpot p = Config.instance().findSafeSpotForPosition(px, py, pz, dim);
+        if (p == null) {
+            return OpResult.ok("Player " + pname + " is not in range of any safe spot.");
+        }
+        double dist = p.distanceTo(px, py, pz);
+        return OpResult.ok(String.format(
+                "Player %s is inside safe spot '%s' (distance %.0f blocks, radius %d).",
+                pname, p.name, dist, p.radius));
+    }
 }

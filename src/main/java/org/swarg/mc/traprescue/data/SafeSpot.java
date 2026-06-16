@@ -23,10 +23,18 @@ public class SafeSpot {
     }
 
     public boolean contains(int x, int y, int z, int dim) {
-        return this.dim == dim &&
-               Math.sqrt((x - this.x) * (x - this.x) +
-                         (y - this.y) * (y - this.y) +
-                         (z - this.z) * (z - this.z)) <= this.radius;
+        return this.dim == dim && distanceSqTo(x, y, z) <= radius * radius;
+    }
+
+    public double distanceTo(int x, int y, int z) {
+        return Math.sqrt(distanceSqTo(x, y, z));
+    }
+
+    public int distanceSqTo(int x, int y, int z) {
+        int dx = x - this.x;
+        int dy = y - this.y;
+        int dz = z - this.z;
+        return dx * dx + dy * dy + dz * dz;
     }
 
     public String serialize() {

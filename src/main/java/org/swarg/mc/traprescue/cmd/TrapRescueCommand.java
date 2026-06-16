@@ -116,25 +116,28 @@ public class TrapRescueCommand extends CommandBase {
 
     private boolean cmdSafeSpot(ICommandSender s, String[] args) {
         if (isCmd(args, 1, "help", "h") || args.length < 2) {
-            return sayUsage(this, s, "safespot <list/add/remove/get/rename>");
+            return sayUsage(this, s, "safespot <list/add/remove/get/check/rename>");
         }
         Config conf = Config.instance();
         if (isCmd(args, 1, "list", "ls")) {
             return say(s, "SafeSpots:\n" + conf.getReadableSafeSpots());
         }
         if (isCmd(args, 1, "add", "a")) {
-            cmdSafeSpotAdd(s, args);
+            return cmdSafeSpotAdd(s, args);
         }
         if (isCmd(args, 1, "remove", "rm")) {
-            cmdSafeSpotRemove(s, args);
+            return cmdSafeSpotRemove(s, args);
         }
         if (isCmd(args, 1, "get", "g")) {
-            cmdSafeSpotGet(s, args);
+            return cmdSafeSpotGet(s, args);
+        }
+        if (isCmd(args, 1, "check", "c")) {
+            return cmdSafeSpotCheck(s, args);
         }
         if (isCmd(args, 1, "rename", "mv")) {
-            cmdSafeSpotRename(s, args);
+            return cmdSafeSpotRename(s, args);
         }
-        return true;
+        return say(s, "Unknown command: " + argS(args, 1));
     }
 
     private boolean cmdSafeSpotAdd(ICommandSender s, String[] args) {
@@ -204,6 +207,17 @@ public class TrapRescueCommand extends CommandBase {
         return sayResult(s, conf.addSafeSpot(p.name, p.x, p.y, p.z, p.dim, p.radius));
     }
 
+    private boolean cmdSafeSpotCheck(ICommandSender s, String[] args) {
+        if (isCmd(args, 2, "help", "h") || args.length < 2) {
+            return sayUsage(this, s, "safespot check <player>");
+        }
+        String pname = argS(args, 2);
+        if (pname == null || pname.isEmpty()) {
+            return say(s, "expected <PlayerName>");
+        }
+        return sayResult(s, RescueService.checkSafeSpot(pname));
+    }
+
     /**
      *
      */
@@ -225,7 +239,7 @@ public class TrapRescueCommand extends CommandBase {
         if (isCmd(args, 1, "remove", "rm")) {
             return say(sender, "removed:" + conf.removeFromBlacklist(pname));
         }
-        return say(sender, "Unknown command: " + args[0]);
+        return say(sender, "Unknown command: " + argS(args, 1));
     }
 
     private boolean cmdPlayer(ICommandSender s, String[] args) {
@@ -243,7 +257,7 @@ public class TrapRescueCommand extends CommandBase {
         if (isCmd(args, 1, "pos", "p")) {
             return sayResult(s, PlayerDataManager.getPlayerPosByName(name));
         }
-        return true;
+        return say(s, "Unknown command: " + argS(args, 1));
     }
 
     private boolean sayResult(ICommandSender sender, OpResult res) {
