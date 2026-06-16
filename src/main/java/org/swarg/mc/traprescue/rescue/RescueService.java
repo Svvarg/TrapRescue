@@ -3,15 +3,13 @@
 package org.swarg.mc.traprescue.rescue;
 
 import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.WorldServer;
 import net.minecraftforge.common.DimensionManager;
 import org.swarg.mc.traprescue.OpResult;
 import org.swarg.mc.traprescue.data.PlayerDataManager;
+import org.swarg.mc.traprescue.data.PlayerDataResolve;
 import org.swarg.mc.traprescue.data.SafeSpot;
-import java.io.File;
-import java.util.UUID;
 import org.swarg.mc.traprescue.Config;
 import static org.swarg.mc.traprescue.RescueLogger.logInfo;
 
@@ -47,9 +45,9 @@ public class RescueService {
     private static OpResult rescueManual(String playerName, SafeSpot spot) {
         EntityPlayerMP player = findPlayerOnline(playerName);
         if (player != null) {
-            return rescueOnlineManual(player, spot);
+            return rescueOnline(player, spot);
         }
-        return rescueOfflineManual(playerName, spot);
+        return rescueOffline(playerName, spot);
     }
 
     // Single dispatcher for auto mode (online + offline)
@@ -61,6 +59,20 @@ public class RescueService {
         return rescueOfflineAuto(playerName);
     }
 
+    /**
+     * Finds a rescue target (SafeSpot now, later extended to auto-exit point).
+     * @return OpResult with data = SafeSpot on success, or failure message.
+     */
+    private static OpResult findRescueTarget(int x, int y, int z, int dim) {
+        SafeSpot spot = Config.instance().findSafeSpotForPosition(x, y, z, dim);
+        if (spot != null) {
+            return OpResult.okData(spot);
+        }
+        // todo 0.4.0: fallback to safe location finder (roof / chunk edge)
+        return OpResult.fail("Player is not in range of any safe spot");
+    }
+
+
     private static EntityPlayerMP findPlayerOnline(String playerName) {
         EntityPlayerMP player = MinecraftServer.getServer()
             .getConfigurationManager().func_152612_a(playerName);
@@ -71,7 +83,7 @@ public class RescueService {
      * Returns true if the teleport is successful,
      * false if player not found or error
      */
-    public static OpResult rescueOnlineManual(EntityPlayerMP player, SafeSpot p) {
+    public static OpResult rescueOnline(EntityPlayerMP player, SafeSpot p) {
         if (player == null) {
             return OpResult.fail("No Player instance");
         }
@@ -99,44 +111,84 @@ public class RescueService {
     }
 
     public static OpResult rescueOnlineAuto(EntityPlayerMP player) {
-        return OpResult.fail("Not implemented yet");
+        if (player == null) {
+            return OpResult.fail("No Player instance");
+        }
+        int dim = player.dimension;
+        int px = (int) Math.round(player.posX);
+        int py = (int) Math.round(player.posY);
+        int pz = (int) Math.round(player.posZ);
+
+        OpResult res = findRescueTarget(px, py, pz, dim);
+        SafeSpot spot = res.getData(SafeSpot.class);
+        if (spot == null) {
+            return res;
+        }
+        return rescueOnline(player, spot);
     }
 
-
-    private static OpResult rescueOfflineManual(String playerName, SafeSpot p) {
-        UUID uuid = PlayerDataManager.resolveUUID(playerName);
-        if (uuid == null) {
-            return OpResult.fail("Player not found: " + playerName);
+    private static OpResult rescueOffline(String playerName, SafeSpot p) {
+        OpResult res = PlayerDataManager.resolveAndLoadPlayerData(playerName);
+        PlayerDataResolve pdata = res.getData(PlayerDataResolve.class);
+        if (pdata == null) {
+            return res;
         }
-
-        File datFile = PlayerDataManager.getPlayerDatFile(uuid);
-        if (datFile == null || !datFile.exists()) {
-            return OpResult.fail("Player data file not found for " + playerName);
+        if (p == null) {
+            return OpResult.fail("no SafeSpot");
         }
-
-        NBTTagCompound playerNbt = PlayerDataManager.loadPlayerData(datFile);
-        if (playerNbt == null) {
-            return OpResult.fail("Failed to read player data for " + playerName);
-        }
-
-        // targetDim = PlayerDataManager.getPlayerDimension(playerNbt);
-
-        PlayerDataManager.setPlayerPos(playerNbt, p.x, p.y, p.z);
-        PlayerDataManager.setPlayerDimension(playerNbt, p.dim);
-
-        PlayerDataManager.savePlayerData(datFile, playerNbt);
-        return logRescued("offline", playerName, p);
+        int dim = PlayerDataManager.getPlayerDimension(pdata.nbt);
+        double[] pos = PlayerDataManager.getPlayerPos(pdata.nbt);
+        logOldPos(playerName, (int) pos[0], (int) pos[1], (int) pos[2], dim);
+        return applyRescueOffline(playerName, p, pdata);
     }
 
     public static OpResult rescueOfflineAuto(String playerName) {
-        return OpResult.fail("Not implemented yet");
+        OpResult res = PlayerDataManager.resolveAndLoadPlayerData(playerName);
+        PlayerDataResolve pdata = res.getData(PlayerDataResolve.class);
+        if (pdata == null) {
+            return res;
+        }
+        int dim = PlayerDataManager.getPlayerDimension(pdata.nbt);
+        double[] pos = PlayerDataManager.getPlayerPos(pdata.nbt);
+
+        int px = (int) Math.round(pos[0]); // x
+        int py = (int) Math.round(pos[1]); // y
+        int pz = (int) Math.round(pos[2]); // z
+
+        res = findRescueTarget(px, py, pz, dim);
+        SafeSpot spot = res.getData(SafeSpot.class);
+        if (spot == null) {
+            return res;
+        }
+        logOldPos(playerName, px, py, pz, dim);
+        return applyRescueOffline(playerName, spot, pdata);
     }
 
+    private static OpResult applyRescueOffline(
+            String playerName, SafeSpot p, PlayerDataResolve data) {
+        PlayerDataManager.setPlayerPos(data.nbt, p.x, p.y, p.z);
+        PlayerDataManager.setPlayerDimension(data.nbt, p.dim);
+        PlayerDataManager.savePlayerData(data.file, data.nbt);
+        return logRescued("offline", playerName, p);
+    }
+
+    /**
+     * tag is online/offline
+     * pname - the Player Name
+     */
     private static OpResult logRescued(String tag, String pname, SafeSpot p) {
         String msg = String.format(
                 "Player %s (%s) rescued to '%s' (%d %d %d dim: %d)",
                 pname, tag, p.name, p.x, p.y, p.z, p.dim);
         logInfo(msg);
         return OpResult.ok(msg);
+    }
+
+    /**
+     * log the player's old position before moving
+     */
+    private static void logOldPos(String pname, int x, int y, int z, int dim) {
+        logInfo(String.format("Player %s rescued from %d %d %d dim: %d)",
+                pname, x, y, z, dim));
     }
 }
