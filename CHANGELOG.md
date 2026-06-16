@@ -5,13 +5,21 @@
 ## [0.3.0] - 2026-06-16
 ### Added
 - Safe spots: named teleport destinations with radius, stored in config.
-- Commands for managing safe spots: `/tra safespot <add/remove/list/get>`
+- Commands for managing safe spots: `/tra safespot <add/remove/list/get/check/rename>`.
+- `/tra safespot check <player>` command to see which safe spot covers a player (online/offline).
 - Support for rescue by safe spot name: `/trap-rescue-admin rescue <player> <safespot_name>`.
-- Rescue always uses a `SafeSpot` object (manual mode creates a "MANUAL" spot).
-- Log message includes safe spot name on rescue.
+- Auto-rescue: if player is inside a safe spot radius, they are teleported to its center.
+- `OpResult` extended with `data` payload to carry objects alongside success/failure.
+- `Config.findSafeSpotForPosition` for nearest safe spot lookup.
+- `RescueService.findRescueTarget` unifying target search for online and offline.
+- Minimum radius check (5 blocks) when adding safe spots.
+- Safespot rename command.
+- README sections: "Why", planned auto-exit detection, clarification of radius-based rescue.
 ### Changed
 - `RescueService` now takes `SafeSpot` instead of raw coordinates.
 - `dim` parameter simplified to `int` with default 0 in commands.
+- `PlayerDataManager.getPlayerNBTData` renamed to `resolveAndLoadPlayerData`, returns `OpResult` with `PlayerDataResolve`.
+- `rescueOnlineAuto` and `rescueOfflineAuto` fully implemented using safe spot search.
 
 ## [0.2.0] - 2026-06-15
 ### Added
