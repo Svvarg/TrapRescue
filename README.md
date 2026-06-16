@@ -83,7 +83,7 @@ All commands require OP level 4 or server console.
   Look up the UUID of a player.
 
 - `/trap-rescue-admin player pos <player>`
-  Show the last known position and dimension of a player (from their .dat file).
+  Show the player's current position and dimension. Uses live data if online, otherwise reads the `.dat` file.
 
 - `/trap-rescue-admin help`
   Print help.

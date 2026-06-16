@@ -8,6 +8,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Map;
 import java.util.UUID;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.nbt.CompressedStreamTools;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagDouble;
@@ -222,20 +223,35 @@ public class PlayerDataManager {
      * @return OpResult with readable coords and dimension
      */
     public static OpResult getPlayerPosByName(String pname) {
-        OpResult res = resolveAndLoadPlayerData(pname);
-        PlayerDataResolve pdata = res.getData(PlayerDataResolve.class);
-        if (pdata == null) {
-            return res;
-        }
+        int x, y, z, dim;
+        final EntityPlayerMP onlinePlayer = MinecraftServer.getServer()
+                .getConfigurationManager().func_152612_a(pname);
 
-        double[] pos = PlayerDataManager.getPlayerPos(pdata.nbt);
-        if (pos == null) {
-            return OpResult.fail("Cannot get the Pos from NBT of:" + pname);
+        if (onlinePlayer != null) {
+            x = (int) Math.round(onlinePlayer.posX);
+            y = (int) Math.round(onlinePlayer.posY);
+            z = (int) Math.round(onlinePlayer.posZ);
+            dim = onlinePlayer.dimension;
+        } else {
+            OpResult res = resolveAndLoadPlayerData(pname);
+            PlayerDataResolve pdata = res.getData(PlayerDataResolve.class);
+            if (pdata == null) {
+                return res;
+            }
+
+            double[] pos = PlayerDataManager.getPlayerPos(pdata.nbt);
+            if (pos == null) {
+                return OpResult.fail("Cannot get the Pos from NBT of:" + pname);
+            }
+            Integer adim = getPlayerDimension(pdata.nbt);
+            dim = (adim == null) ? 0 : adim;
+            x = (int) pos[0];
+            y = (int) pos[1];
+            z = (int) pos[2];
         }
-        Integer dim = getPlayerDimension(pdata.nbt);
 
         return OpResult.ok(String.format("Pos: %.1f %.1f %.1f dim: %s",
-                    pos[0], pos[1], pos[2], dim));
+                    x, y, z, dim));
     }
 
 }

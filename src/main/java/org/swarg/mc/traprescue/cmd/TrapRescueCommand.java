@@ -33,7 +33,7 @@ public class TrapRescueCommand extends CommandBase {
     public void processCommand(ICommandSender sender, String[] args) {
         if (args.length > 0) {
             if (isCmd(args, 0, "version", "v")) {
-                say(sender, Reference.MOD_VERSION);
+                say(sender, Reference.MOD_ID + " " + Reference.MOD_VERSION);
             } else if (isCmd(args, 0, "config", "c")) {
                 cmdConfig(sender, args);
             } else if (isCmd(args, 0, "rescue", "r")) {
