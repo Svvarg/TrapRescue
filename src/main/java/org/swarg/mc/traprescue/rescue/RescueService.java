@@ -188,7 +188,7 @@ public class RescueService {
      * log the player's old position before moving
      */
     private static void logOldPos(String pname, int x, int y, int z, int dim) {
-        logInfo(String.format("Player %s rescued from %d %d %d dim: %d)",
+        logInfo(String.format("Player %s rescued from %d %d %d dim: %d",
                 pname, x, y, z, dim));
     }
 
