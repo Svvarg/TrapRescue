@@ -11,6 +11,7 @@ import net.minecraft.command.ICommandSender;
 import org.swarg.mc.traprescue.Config;
 import org.swarg.mc.traprescue.OpResult;
 import org.swarg.mc.traprescue.data.PlayerDataManager;
+import org.swarg.mc.traprescue.data.SafeSpot;
 import org.swarg.mc.traprescue.rescue.RescueService;
 import static org.swarg.mc.traprescue.cmd.CommandHelper.*;
 
@@ -24,7 +25,7 @@ public class TrapRescueCommand extends CommandBase {
 
     @Override
     public String getCommandUsage(ICommandSender sender) {
-        return "/trap-rescue-admin <config/rescue/blacklist/player>";
+        return "/trap-rescue-admin <config/rescue/safespot/blacklist/player>";
     }
 
     @Override
@@ -34,6 +35,8 @@ public class TrapRescueCommand extends CommandBase {
                 cmdConfig(sender, args);
             } else if (isCmd(args, 0, "rescue", "r")) {
                 cmdRescue(sender, args);
+            } else if (isCmd(args, 0, "safespot", "s")) {
+                cmdSafeSpot(sender, args);
             } else if (isCmd(args, 0, "blacklist", "bl")) {
                 cmdBlacklist(sender, args);
             } else if (isCmd(args, 0, "player", "p")) {
@@ -63,11 +66,15 @@ public class TrapRescueCommand extends CommandBase {
 
     private boolean cmdRescue(ICommandSender sender, String[] args) {
         if (isCmd(args, 1, "help", "h") || args.length < 2) {
-            return sayUsage(this, sender, "rescue <player> [x y z [dim]]");
+            return sayUsage(this, sender,
+                "rescue <player> [x y z [dim] ]/[<safe-point-name>]");
         }
         String pname = argS(args, 1);
         if (pname == null || pname.length() < 2) {
             return say(sender, "Invalid player name: " + pname);
+        }
+        if (args.length == 3) {
+            return doRescueToSafeSpot(sender, args, pname);
         }
         if (args.length >= 5) {
             return doRescueManual(sender, args, pname);
@@ -77,8 +84,7 @@ public class TrapRescueCommand extends CommandBase {
 
     // Manual mode: x y z dim (dim defaults to 0 if not present)
     public boolean doRescueManual(ICommandSender s, String[] args, String pname) {
-        int x, y, z;
-        Integer dim = null;
+        int x, y, z, dim = 0;
         try {
             x = Integer.parseInt(args[2]);
             y = Integer.parseInt(args[3]);
@@ -93,8 +99,82 @@ public class TrapRescueCommand extends CommandBase {
                 return say(s, "Invalid dimension:" + args[5]);
             }
         }
+        SafeSpot p = new SafeSpot("MANUAL", x, y, z, dim, 0);
+        return sayResult(s, RescueService.rescue(pname, p));
+    }
 
-        return sayResult(s, RescueService.rescue(pname, x, y, z, dim));
+    // tra rescue <player> <safe-point-name>
+    public boolean doRescueToSafeSpot(ICommandSender s, String[] args, String pname) {
+        String name = argS(args, 2);
+        SafeSpot p = Config.instance().getSafeSpot(name);
+        if (p == null) {
+            return say(s, "Not Found SafeSpot with name: " + name);
+        }
+        // check radius?
+        return sayResult(s, RescueService.rescue(pname, p));
+    }
+
+    private boolean cmdSafeSpot(ICommandSender s, String[] args) {
+        if (isCmd(args, 1, "help", "h") || args.length < 2) {
+            return sayUsage(this, s, "safespot <list/add/remove/get>");
+        }
+        Config conf = Config.instance();
+        if (isCmd(args, 1, "list", "ls")) {
+            return say(s, "SafeSpots:\n" + conf.getReadableSafeSpots());
+        }
+        if (isCmd(args, 1, "add", "a")) {
+            cmdSafeSpotAdd(s, args);
+        }
+        if (isCmd(args, 1, "remove", "rm")) {
+            cmdSafeSpotRemove(s, args);
+        }
+        if (isCmd(args, 1, "get", "g")) {
+            cmdSafeSpotGet(s, args);
+        }
+        return true;
+    }
+
+    private boolean cmdSafeSpotAdd(ICommandSender s, String[] args) {
+        if (isCmd(args, 2, "help", "h") || args.length < 2) {
+            return sayUsage(this, s, "safespot add <name> x y z dim radius");
+        }
+        int i = 2;
+        String name = argS(args, i++);
+        int x, y, z, dim, radius;
+        try {
+            x = Integer.parseInt(args[i++]);
+            y = Integer.parseInt(args[i++]);
+            z = Integer.parseInt(args[i++]);
+            dim = Integer.parseInt(args[i++]);
+            radius = Integer.parseInt(args[i++]);
+        } catch (Exception e) {
+            return say(s, "Invalid input. expected: x y z dim radius");
+        }
+        return sayResult(s, Config.instance().addSafeSpot(name, x, y, z, dim, radius));
+    }
+
+    private boolean cmdSafeSpotRemove(ICommandSender s, String[] args) {
+        if (isCmd(args, 2, "help", "h") || args.length < 2) {
+            return sayUsage(this, s, "safespot remove <name>");
+        }
+        String name = argS(args, 2);
+        SafeSpot removed = Config.instance().removeSafeSpot(name);
+        if (removed == null) {
+            return say(s, "Not found SafeSpot with name: "+name);
+        }
+        return say(s, "Removed SafeSpot: " + removed.serialize());
+    }
+
+    private boolean cmdSafeSpotGet(ICommandSender s, String[] args) {
+        if (isCmd(args, 2, "help", "h") || args.length < 2) {
+            return sayUsage(this, s, "safespot get <name>");
+        }
+        String name = argS(args, 2);
+        SafeSpot spot = Config.instance().getSafeSpot(name);
+        if (spot == null) {
+            return say(s, "Not found SafeSpot with name: "+name);
+        }
+        return say(s, "SafeSpot: " + spot.serialize());
     }
 
     private boolean cmdBlacklist(ICommandSender sender, String[] args) {

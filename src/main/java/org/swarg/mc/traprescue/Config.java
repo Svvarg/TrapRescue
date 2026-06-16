@@ -3,7 +3,14 @@
 package org.swarg.mc.traprescue;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import org.swarg.mc.traprescue.data.SafeSpot;
 import net.minecraftforge.common.config.Configuration;
 
 import static org.swarg.mc.traprescue.Reference.*;
@@ -16,12 +23,17 @@ public class Config {
     public boolean enabled = true;
     public boolean verbose;
     public String[] playerBlacklist;
+    private List<SafeSpot> safeSpots = new ArrayList<>();
+
 
     private static final String C_BLACKLIST =
             "Player names that cannot be rescued.";
 
     private static final String C_ENABLED =
             "Set to false to completely disable the TrapRescue mod. ";
+
+    private static final String C_SAFE_SPOTS =
+            "Named safe spots. Format: " + SafeSpot.FORMAT;
 
     public static Config instance() {
         if (instance == null) throw new IllegalStateException("Config not initialized");
@@ -54,6 +66,8 @@ public class Config {
 
         playerBlacklist = c.getStringList("blacklist", "main",
                 new String[] {}, C_BLACKLIST);
+
+        safeSpots = loadSafeSpots(c);
 
 		if (c.hasChanged()) c.save(); // to save default values
 
@@ -130,6 +144,101 @@ public class Config {
                 if (sb.length() > 0) sb.append(' ');
                 sb.append(name);
             }
+        }
+        return sb.toString();
+    }
+
+    private List<SafeSpot> loadSafeSpots(Configuration c) {
+        String[] entries = c.getStringList("entries", "safe_spots",
+                new String[] {}, C_SAFE_SPOTS);
+
+        Map<String, SafeSpot> map = new HashMap<>();
+        for (String entry : entries) {
+            SafeSpot spot = SafeSpot.deserialize(entry);
+            if (spot != null) {
+                if (map.containsKey(spot.name)) {
+                    logWarn("Duplicate safe spot name '" + spot.name + "'.");
+                }
+                map.put(spot.name, spot);
+            }
+        }
+        return new ArrayList<>(map.values());
+    }
+
+    public int getSafeSpotIndexByName(String name) {
+        if (name != null && !name.isEmpty()) {
+            for (int i = 0; i < this.safeSpots.size(); i++) {
+                SafeSpot spot = this.safeSpots.get(i);
+                if (name.equalsIgnoreCase(spot.name)) {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
+
+    public SafeSpot getSafeSpot(String name) {
+        int i = getSafeSpotIndexByName(name);
+        return i > -1 ? this.safeSpots.get(i) : null;
+    }
+
+    public Collection<SafeSpot> getAllSafeSpots() {
+        return Collections.unmodifiableCollection(safeSpots);
+    }
+
+    public Integer getIntOrNull(String s) {
+        try {
+            return Integer.parseInt(s);
+        } catch (Exception ignore) {
+        }
+        return null;
+    }
+
+    public OpResult addSafeSpot(String name, int x, int y, int z, int dim, int radius) {
+        String key = name == null ? null : name.trim().toLowerCase();
+        if (y < 0 || y > 255 || radius < 0 || key == null || key.isEmpty()) {
+            return OpResult.fail("invalid params");
+        }
+        if (getIntOrNull(key) != null || key.indexOf(":") > -1) {
+            return OpResult.fail("invalid name (should not be a number)");
+        }
+        int i = getSafeSpotIndexByName(key);
+        if (i > -1) {
+            logWarn("Safe spot '" + key + "' already exists. Overwriting.");
+            this.safeSpots.remove(i);
+        }
+        SafeSpot spot = new SafeSpot(key, x, y, z, dim, radius);
+        safeSpots.add(spot);
+        writeSafeSpotsToConfig();
+        return OpResult.ok("added");
+    }
+
+    public SafeSpot removeSafeSpot(String name) {
+        String key = name.toLowerCase().trim();
+        int i = getSafeSpotIndexByName(key);
+        if (i > -1) {
+            SafeSpot removed = safeSpots.remove(i);
+            writeSafeSpotsToConfig();
+            return removed;
+        }
+        return null;
+    }
+
+    private void writeSafeSpotsToConfig() {
+        String[] lines = new String[safeSpots.size()];
+        int i = 0;
+        for (SafeSpot spot : safeSpots) {
+            lines[i++] = spot.serialize();
+        }
+        forgeConfig.get("safe_spots", "entries", new String[] {}, C_SAFE_SPOTS)
+            .set(lines);
+        forgeConfig.save();
+    }
+
+    public String getReadableSafeSpots() {
+        StringBuilder sb = new StringBuilder();
+        for (SafeSpot spot : safeSpots) {
+            sb.append(spot.serialize()).append("\n");
         }
         return sb.toString();
     }

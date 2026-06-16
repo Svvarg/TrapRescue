@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-06-16
+### Added
+- Safe spots: named teleport destinations with radius, stored in config.
+- Commands for managing safe spots: `/tra safespot <add/remove/list/get>`
+- Support for rescue by safe spot name: `/trap-rescue-admin rescue <player> <safespot_name>`.
+- Rescue always uses a `SafeSpot` object (manual mode creates a "MANUAL" spot).
+- Log message includes safe spot name on rescue.
+### Changed
+- `RescueService` now takes `SafeSpot` instead of raw coordinates.
+- `dim` parameter simplified to `int` with default 0 in commands.
+
 ## [0.2.0] - 2026-06-15
 ### Added
 - Offline manual rescue: teleport offline players via direct `.dat` editing.

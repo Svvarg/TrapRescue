@@ -9,6 +9,7 @@ import net.minecraft.world.WorldServer;
 import net.minecraftforge.common.DimensionManager;
 import org.swarg.mc.traprescue.OpResult;
 import org.swarg.mc.traprescue.data.PlayerDataManager;
+import org.swarg.mc.traprescue.data.SafeSpot;
 import java.io.File;
 import java.util.UUID;
 import org.swarg.mc.traprescue.Config;
@@ -22,13 +23,12 @@ import static org.swarg.mc.traprescue.RescueLogger.logInfo;
  */
 public class RescueService {
 
-    public static OpResult rescue(String playerName){
-        return rescue(playerName, null, null, null, null);
+    public static OpResult rescue(String playerName) {
+        return rescue(playerName, null);
     }
 
     // Single dispatcher for audo/manual mode (online + offline)
-    public static OpResult rescue(String playerName,
-            Integer x, Integer y, Integer z, Integer dim) {
+    public static OpResult rescue(String playerName, SafeSpot spot) {
         Config conf = Config.instance();
         if (!conf.enabled) {
             return OpResult.fail("Mod is disabled in the configuration.");
@@ -36,21 +36,20 @@ public class RescueService {
         if (conf.isPlayerBlacklisted(playerName)) {
             return OpResult.fail("Player Blacklisted: " + playerName);
         }
-        if (x != null && y != null && z != null) {
-            return rescueManual(playerName, x, y, z, dim);
+        if (spot != null) {
+            return rescueManual(playerName, spot);
         }
         return rescueAuto(playerName);
     }
 
 
     // Single dispatcher for manual mode (online + offline)
-    private static OpResult rescueManual(
-            String playerName, int x, int y, int z, Integer dim) {
+    private static OpResult rescueManual(String playerName, SafeSpot spot) {
         EntityPlayerMP player = findPlayerOnline(playerName);
         if (player != null) {
-            return rescueOnlineManual(player, x, y, z, dim);
+            return rescueOnlineManual(player, spot);
         }
-        return rescueOfflineManual(playerName, x, y, z, dim);
+        return rescueOfflineManual(playerName, spot);
     }
 
     // Single dispatcher for auto mode (online + offline)
@@ -72,33 +71,31 @@ public class RescueService {
      * Returns true if the teleport is successful,
      * false if player not found or error
      */
-    public static OpResult rescueOnlineManual(EntityPlayerMP player,
-            int x, int y, int z, Integer dimension) {
+    public static OpResult rescueOnlineManual(EntityPlayerMP player, SafeSpot p) {
         if (player == null) {
             return OpResult.fail("No Player instance");
         }
-        if (y < 0 || y > 255) {
-            return OpResult.fail("Y coordinate out of bounds: " + y);
+        if (p == null) {
+            return OpResult.fail("No SafeSpot");
         }
-
-        if (dimension == null) {
-            dimension = player.dimension;
+        if (p.y < 0 || p.y > 255) {
+            return OpResult.fail("Y coordinate out of bounds: " + p.y);
         }
 
         // Check that the target dimension exists and is loaded
-        WorldServer targetWorld = DimensionManager.getWorld(dimension);
+        WorldServer targetWorld = DimensionManager.getWorld(p.dim);
         if (targetWorld == null) {
-            return OpResult.fail("Dimension " + dimension + " not loaded.");
+            return OpResult.fail("Dimension " + p.dim + " not loaded.");
         }
 
-        if (player.dimension != dimension) {
-            player.travelToDimension(dimension);
+        if (player.dimension != p.dim) {
+            player.travelToDimension(p.dim);
         }
 
-        player.setPositionAndUpdate(x + 0.5, y, z + 0.5);
+        player.setPositionAndUpdate(p.x + 0.5, p.y, p.z + 0.5);
 
         String pname = player.getCommandSenderName();
-        return logRescued("online manual", pname, x, y, z, dimension);
+        return logRescued("online", pname, p);
     }
 
     public static OpResult rescueOnlineAuto(EntityPlayerMP player) {
@@ -106,9 +103,7 @@ public class RescueService {
     }
 
 
-    private static OpResult rescueOfflineManual(String playerName,
-            int x, int y, int z, Integer dimension) {
-
+    private static OpResult rescueOfflineManual(String playerName, SafeSpot p) {
         UUID uuid = PlayerDataManager.resolveUUID(playerName);
         if (uuid == null) {
             return OpResult.fail("Player not found: " + playerName);
@@ -124,28 +119,23 @@ public class RescueService {
             return OpResult.fail("Failed to read player data for " + playerName);
         }
 
-        int targetDim;
-        if (dimension != null) {
-            targetDim = dimension;
-        } else {
-            targetDim = PlayerDataManager.getPlayerDimension(playerNbt);
-        }
+        // targetDim = PlayerDataManager.getPlayerDimension(playerNbt);
 
-        PlayerDataManager.setPlayerPos(playerNbt, x, y, z);
-        PlayerDataManager.setPlayerDimension(playerNbt, targetDim);
+        PlayerDataManager.setPlayerPos(playerNbt, p.x, p.y, p.z);
+        PlayerDataManager.setPlayerDimension(playerNbt, p.dim);
 
         PlayerDataManager.savePlayerData(datFile, playerNbt);
-        return logRescued("offline manual", playerName, x, y, z, targetDim);
+        return logRescued("offline", playerName, p);
     }
 
     public static OpResult rescueOfflineAuto(String playerName) {
         return OpResult.fail("Not implemented yet");
     }
 
-    private static OpResult logRescued(String tag, String playerName,
-            int x, int y, int z, int dim) {
-        String msg = "Player: " + playerName + " rescued to " +
-                x + " " + y + " " + z + " dim: " + dim + " (" + tag + ")";
+    private static OpResult logRescued(String tag, String pname, SafeSpot p) {
+        String msg = String.format(
+                "Player %s (%s) rescued to '%s' (%d %d %d dim: %d)",
+                pname, tag, p.name, p.x, p.y, p.z, p.dim);
         logInfo(msg);
         return OpResult.ok(msg);
     }

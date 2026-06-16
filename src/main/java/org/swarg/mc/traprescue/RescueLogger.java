@@ -11,4 +11,8 @@ public class RescueLogger {
     public static void logInfo(String msg) {
         LOG.info("[TrapRescue] {}", msg);
     }
+
+    public static void logWarn(String msg) {
+        LOG.warn("[TrapRescue] {}", msg);
+    }
 }
