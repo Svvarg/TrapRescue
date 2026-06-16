@@ -116,7 +116,7 @@ public class TrapRescueCommand extends CommandBase {
 
     private boolean cmdSafeSpot(ICommandSender s, String[] args) {
         if (isCmd(args, 1, "help", "h") || args.length < 2) {
-            return sayUsage(this, s, "safespot <list/add/remove/get>");
+            return sayUsage(this, s, "safespot <list/add/remove/get/rename>");
         }
         Config conf = Config.instance();
         if (isCmd(args, 1, "list", "ls")) {
@@ -130,6 +130,9 @@ public class TrapRescueCommand extends CommandBase {
         }
         if (isCmd(args, 1, "get", "g")) {
             cmdSafeSpotGet(s, args);
+        }
+        if (isCmd(args, 1, "rename", "mv")) {
+            cmdSafeSpotRename(s, args);
         }
         return true;
     }
@@ -150,6 +153,9 @@ public class TrapRescueCommand extends CommandBase {
         } catch (Exception e) {
             return say(s, "Invalid input. expected: x y z dim radius");
         }
+        if (radius < 5) {
+            return say(s, "radius must be greater than 5 (blocks)");
+        }
         return sayResult(s, Config.instance().addSafeSpot(name, x, y, z, dim, radius));
     }
 
@@ -160,7 +166,7 @@ public class TrapRescueCommand extends CommandBase {
         String name = argS(args, 2);
         SafeSpot removed = Config.instance().removeSafeSpot(name);
         if (removed == null) {
-            return say(s, "Not found SafeSpot with name: "+name);
+            return say(s, "Not found SafeSpot with name: " + name);
         }
         return say(s, "Removed SafeSpot: " + removed.serialize());
     }
@@ -172,11 +178,35 @@ public class TrapRescueCommand extends CommandBase {
         String name = argS(args, 2);
         SafeSpot spot = Config.instance().getSafeSpot(name);
         if (spot == null) {
-            return say(s, "Not found SafeSpot with name: "+name);
+            return say(s, "Not found SafeSpot with name: " + name);
         }
         return say(s, "SafeSpot: " + spot.serialize());
     }
 
+    private boolean cmdSafeSpotRename(ICommandSender s, String[] args) {
+        if (isCmd(args, 2, "help", "h") || args.length < 2) {
+            return sayUsage(this, s, "safespot rename <old-name> <new-name>");
+        }
+        String oldName = argS(args, 2);
+        String newName = argS(args, 3);
+        if (newName == null || newName.isEmpty()) {
+            return say(s, "no new-name");
+        }
+        if (newName.equalsIgnoreCase(oldName)) {
+            return say(s, "old and new name are the same");
+        }
+        Config conf = Config.instance();
+        SafeSpot p = conf.getSafeSpot(oldName);
+        if (p == null) {
+            return say(s, "Not found SafeSpot with name: " + oldName);
+        }
+        conf.removeSafeSpot(oldName);
+        return sayResult(s, conf.addSafeSpot(p.name, p.x, p.y, p.z, p.dim, p.radius));
+    }
+
+    /**
+     *
+     */
     private boolean cmdBlacklist(ICommandSender sender, String[] args) {
         if (isCmd(args, 1, "help", "h") || args.length < 2) {
             return sayUsage(this, sender, "blacklist <list/add/remove> <player>");
