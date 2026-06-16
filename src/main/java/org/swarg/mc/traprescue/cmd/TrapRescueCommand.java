@@ -10,6 +10,7 @@ import net.minecraft.command.ICommandSender;
 
 import org.swarg.mc.traprescue.Config;
 import org.swarg.mc.traprescue.OpResult;
+import org.swarg.mc.traprescue.Reference;
 import org.swarg.mc.traprescue.data.PlayerDataManager;
 import org.swarg.mc.traprescue.data.SafeSpot;
 import org.swarg.mc.traprescue.rescue.RescueService;
@@ -25,13 +26,15 @@ public class TrapRescueCommand extends CommandBase {
 
     @Override
     public String getCommandUsage(ICommandSender sender) {
-        return "/trap-rescue-admin <config/rescue/safespot/blacklist/player>";
+        return "/trap-rescue-admin <config/rescue/safespot/blacklist/player/version>";
     }
 
     @Override
     public void processCommand(ICommandSender sender, String[] args) {
         if (args.length > 0) {
-            if (isCmd(args, 0, "config", "c")) {
+            if (isCmd(args, 0, "version", "v")) {
+                say(sender, Reference.MOD_VERSION);
+            } else if (isCmd(args, 0, "config", "c")) {
                 cmdConfig(sender, args);
             } else if (isCmd(args, 0, "rescue", "r")) {
                 cmdRescue(sender, args);
