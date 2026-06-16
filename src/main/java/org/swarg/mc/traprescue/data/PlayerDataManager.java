@@ -225,7 +225,6 @@ public class PlayerDataManager {
         OpResult res = resolveAndLoadPlayerData(pname);
         PlayerDataResolve pdata = res.getData(PlayerDataResolve.class);
         if (pdata == null) {
-            System.out.println("getPlayerPosByName data:" + res.data);
             return res;
         }
 
