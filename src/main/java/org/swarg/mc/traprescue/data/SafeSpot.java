@@ -22,6 +22,13 @@ public class SafeSpot {
         this.radius = radius;
     }
 
+    public boolean contains(int x, int y, int z, int dim) {
+        return this.dim == dim &&
+               Math.sqrt((x - this.x) * (x - this.x) +
+                         (y - this.y) * (y - this.y) +
+                         (z - this.z) * (z - this.z)) <= this.radius;
+    }
+
     public String serialize() {
         return name + ":" + x + ":" + y + ":" + z + ":" + dim + ":" + radius;
     }

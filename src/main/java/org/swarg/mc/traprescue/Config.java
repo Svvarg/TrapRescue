@@ -242,4 +242,22 @@ public class Config {
         }
         return sb.toString();
     }
+
+    public SafeSpot findSafeSpotForPosition(int x, int y, int z, int dim) {
+        SafeSpot best = null;
+        int bestDistSq = Integer.MAX_VALUE;
+        for (SafeSpot spot : safeSpots) {
+            if (spot.dim == dim) {
+                int dx = x - spot.x;
+                int dy = y - spot.y;
+                int dz = z - spot.z;
+                int distSq = dx * dx + dy * dy + dz * dz;
+                if (distSq <= spot.radius * spot.radius && distSq < bestDistSq) {
+                    bestDistSq = distSq;
+                    best = spot;
+                }
+            }
+        }
+        return best;
+    }
 }
